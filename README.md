@@ -1,2 +1,4 @@
 # Qhali_Nawi
-Repositorio de actualizaciones de las distintas versiones de la app
+# Team Eye-Saviors
+Repositorio de actualizaciones de los distintos modulos de nuestra solución
+
