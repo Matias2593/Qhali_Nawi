@@ -1,0 +1,247 @@
+import flet as ft
+import json
+import os
+import re  # Nueva importación para la validación de la fecha
+
+# Función para leer los datos de pacientes desde un archivo JSON
+def load_patient_data():
+    if os.path.exists("patient_data.json"):
+        with open("patient_data.json", "r") as file:
+            return json.load(file)
+    return []
+
+# Función para guardar los datos en un archivo JSON
+def save_patient_data(patient_data):
+    existing_data = load_patient_data()  # Leer los datos existentes
+    existing_data.append(patient_data)   # Añadir el nuevo paciente
+    with open("patient_data.json", "w") as file:
+        json.dump(existing_data, file, indent=4)  # Guardar todos los pacientes
+
+def main(page: ft.Page):
+    page.title = "Qhali Ñawi - Bienvenida"
+    page.theme_mode = "light"  # Usar el tema claro para colores personalizados
+
+    # Cambiar color de fondo de la página principal
+    page.bgcolor = "#EAD5F2"  # Color de fondo similar al mostrado en la imagen
+
+    # Frame de bienvenida con imagen y estilo personalizado
+    def show_welcome_frame():
+        # Ruta de la imagen cargada
+        image_path = "medicos.png"
+
+        # Elementos de la primera página
+        image = ft.Image(src=image_path, width=470, height=470, fit=ft.ImageFit.CONTAIN)  # Imagen más grande
+        subtitle = ft.Text("QHALI ÑAWI", size=35, weight="bold", color="black")  # Subtítulo
+        start_button = ft.ElevatedButton("EMPEZAR", on_click=show_patient_form_frame, width=150, bgcolor="#8E44AD", color="white")
+
+        # Añadir todos los elementos a la página
+        page.controls.clear()
+        page.add(
+            ft.Column(
+                controls=[
+                    ft.Container(image, alignment=ft.alignment.center),  # Imagen centrada
+                    ft.Container(ft.Text("Bienvenido a", size=20, color="black")),
+                    subtitle,
+                    ft.Container(ft.Text("Detección de glaucoma mediante realidad virtual", size=15, italic=True, color="gray")),
+                    start_button
+                ],
+                alignment="center", horizontal_alignment="center", spacing=15, expand=True
+            )
+        )
+        page.vertical_alignment = "center"
+        page.horizontal_alignment = "center"
+        page.update()
+
+    # Frame de recopilación de datos del paciente
+    def show_patient_form_frame(e):
+        def save_data_and_continue(e):
+            # Validar si todos los campos están llenos y si el género está en "Elija una opción"
+            if not (id_input.value and first_name_input.value and last_name_input.value and age_input.value and dob_input.value and gender_input.value and gender_input.value != "Elija una opción"):
+                result_text.value = "Todos los campos son obligatorios."
+                result_text.color = "red"
+                page.update()
+                return
+            # Validar formato de fecha
+            elif not re.match(r"^\d{4}-\d{2}-\d{2}$", dob_input.value):
+                result_text.value = "Formato de fecha incorrecto. Use AAAA-MM-DD."
+                result_text.color = "red"
+                page.update()
+                return
+            # Validar que la casilla esté marcada
+            elif not confirm_input.value:
+                result_text.value = "Debe aceptar el uso de sus datos para continuar."
+                result_text.color = "red"
+                page.update()
+                return
+            else:
+                # Si todos los campos son correctos, proceder
+                result_text.value = ""  # Limpiar el mensaje de error
+                patient_data = {
+                    "ID": id_input.value,
+                    "Nombres": first_name_input.value,
+                    "Apellidos": last_name_input.value,
+                    "Edad": age_input.value,
+                    "Género": gender_input.value,
+                    "Fecha de nacimiento": dob_input.value,
+                    "Acepta uso de datos": confirm_input.value
+                }
+                show_exam_config_frame(patient_data)
+                return  # Salir de la función para que no se actualice el mensaje de error
+            page.update()
+
+        def go_back(e):
+            show_welcome_frame()  # Regresar a la página principal
+
+        # Definir la validación de solo números para los campos "ID del Paciente" y "Edad"
+        def validate_numeric_input(e):
+            e.control.value = ''.join(filter(str.isdigit, e.control.value))
+            e.control.update()
+
+        # Definir la validación para aceptar solo números y guiones en "Fecha de Nacimiento"
+        def validate_date_input(e):
+            # Permitir solo números y guiones
+            e.control.value = ''.join([c for c in e.control.value if c.isdigit() or c == '-'])
+            e.control.update()
+
+        # Campos del formulario con la validación de solo números
+        id_input = ft.TextField(
+            label="ID del paciente", 
+            expand=True,
+            on_change=validate_numeric_input  # Permitir solo números
+        )
+        first_name_input = ft.TextField(label="Nombres", expand=True)
+        last_name_input = ft.TextField(label="Apellidos", expand=True)
+        age_input = ft.TextField(
+            label="Edad", 
+            expand=True,
+            on_change=validate_numeric_input  # Permitir solo números
+        )
+        
+        # Campo de fecha de nacimiento con validaciones adicionales
+        dob_input = ft.TextField(
+            label="Fecha de nacimiento (AAAA-MM-DD)", 
+            expand=True,
+            max_length=10,  # Limitar a 10 caracteres
+            on_change=validate_date_input  # Permitir solo números y guiones
+        )
+        
+        # Selección de género con una opción por defecto "Elija una opción"
+        gender_input = ft.Dropdown(
+            label="Género",
+            options=[
+                ft.dropdown.Option("Elija una opción"),  # Texto por defecto
+                ft.dropdown.Option("Masculino"),
+                ft.dropdown.Option("Femenino"),
+                ft.dropdown.Option("Otro")
+            ],
+            value="Elija una opción"
+        )
+        
+        # Casilla de verificación
+        confirm_input = ft.Checkbox(label="Acepto el uso de mis datos para fines médicos")
+
+        # Botón para guardar los datos
+        save_button = ft.ElevatedButton("Guardar y Continuar", on_click=save_data_and_continue)
+        
+        # Mensaje de resultado
+        result_text = ft.Text("", color="green")
+
+        # Botón para regresar
+        back_button = ft.IconButton(ft.icons.ARROW_BACK, on_click=go_back)
+
+        # Usar Stack para posicionar la flecha a la izquierda y el texto "Qhali Ñawi" centrado
+        header = ft.Row(
+            controls=[
+                ft.Container(back_button, alignment=ft.alignment.center_left),  # Flecha a la izquierda
+                ft.Container(ft.Text("Qhali Ñawi", size=30, weight="bold"), alignment=ft.alignment.center)  # Texto centrado
+            ],
+            height=50  # Altura del encabezado
+        )
+
+        # Organizar los controles en la página
+        page.controls.clear()
+        page.add(
+            ft.Column(
+                controls=[header, ft.Text("Datos del paciente", size=25, italic=True, color="gray"), id_input, first_name_input, last_name_input, age_input, dob_input, gender_input, confirm_input, save_button, result_text],
+                spacing=20
+            )
+        )
+        page.update()
+
+    # Frame para configurar el examen
+    def show_exam_config_frame(patient_data):
+        def save_exam_config(e):
+            exam_config = {
+                "Patrón": pattern_dropdown.value,
+                "Tamaño de estímulo": size_dropdown.value,
+                "Color de estímulo": "Blanco",
+                "Color de fondo": "Negro",
+                "Estrategia": "SITA-Estándar"
+            }
+            combined_data = {
+                "Datos del paciente": patient_data,
+                "Configuración del examen": exam_config
+            }
+            save_patient_data(combined_data)  # Guardar datos del paciente y configuración del examen
+            result_text.value = "Datos del paciente y configuración del examen guardados correctamente."
+            page.update()
+
+        def go_back(e):
+            show_patient_form_frame(e)  # Regresar a la sección anterior
+
+        pattern_dropdown = ft.Dropdown(
+            label="Patrón",
+            options=[ft.dropdown.Option("10-2"), ft.dropdown.Option("24-2"), ft.dropdown.Option("30-2")],
+            value="10-2"
+        )
+        size_dropdown = ft.Dropdown(
+            label="Tamaño de estímulo",
+            options=[ft.dropdown.Option("Tamaño III"), ft.dropdown.Option("Tamaño V")],
+            value="Tamaño III"
+        )
+
+        # Recuadros para valores predeterminados
+        stimulus_color_box = ft.TextField(
+            label="Color de estímulo",
+            value="Blanco",
+            read_only=True
+        )
+        background_color_box = ft.TextField(
+            label="Color de fondo",
+            value="Negro",
+            read_only=True
+        )
+        strategy_box = ft.TextField(
+            label="Estrategia",
+            value="SITA-Estándar",
+            read_only=True
+        )
+
+        save_button = ft.ElevatedButton("Guardar", on_click=save_exam_config)
+        result_text = ft.Text("", color="green")
+        back_button = ft.IconButton(ft.icons.ARROW_BACK, on_click=go_back)
+
+        page.controls.clear()
+        page.add(
+            ft.Column(
+                controls=[
+                    back_button,
+                    ft.Text("Configurar examen:", size=25, weight="bold"),
+                    pattern_dropdown,
+                    size_dropdown,
+                    ft.Text("Valores predeterminados", size=20, weight="bold"),
+                    stimulus_color_box,
+                    background_color_box,
+                    strategy_box,
+                    save_button,
+                    result_text
+                ],
+                spacing=20
+            )
+        )
+        page.update()
+
+    show_welcome_frame()
+
+# Iniciar la app
+ft.app(target=main)
