@@ -1,42 +1,64 @@
 import React from 'react';
-import { View, Text, Button, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 
 const HomeScreen = () => {
   const router = useRouter();
 
   const handleStart = () => {
-    router.push('/patient-form'); //formulario del paciente
+    router.push('/patient-form');
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>QHALI ÑAWI</Text>
       <Text style={styles.subtitle}>Detección de glaucoma mediante realidad virtual</Text>
-      <Button title="EMPEZAR" onPress={handleStart} color="#8E44AD" />
-    </View>
+      
+      <TouchableOpacity style={styles.button} onPress={handleStart}>
+        <Text style={styles.buttonText}>EMPEZAR</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#EDE7F6',
+    padding: 20,
+    backgroundColor: '#E0E7FF',  //Fondo azul claro
   },
   title: {
     fontSize: 40,
     fontWeight: 'bold',
-    color: '#5E35B1',
+    color: '#4C51BF',  //Azul oscuro
     textAlign: 'center',
     marginBottom: 20,
+    textTransform: 'uppercase',
   },
   subtitle: {
     fontSize: 20,
-    color: 'gray',
+    color: '#718096',  //Gris tenue
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 40,
+  },
+  button: {
+    backgroundColor: '#6B46C1',  //Morado vibrante
+    paddingVertical: 15,
+    paddingHorizontal: 50,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,  //Sombra en Android
+  },
+  buttonText: {
+    color: '#FFFFFF',  //Texto blanco
+    fontSize: 18,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
 });
 
