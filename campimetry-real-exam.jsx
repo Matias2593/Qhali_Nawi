@@ -1,17 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Button } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useNavigation } from '@react-navigation/native';
 
 const CampimetryRealExam = () => {
+  const navigation = useNavigation();
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Inicio del Examen de Campimetría</Text>
 
       {/* WebView para mostrar el stream del ESP32 */}
       <WebView
-        source={{ uri: 'http://10.101.48.143:81/stream' }}  // URL del ESP32
+        source={{ uri: 'http://10.100.70.61:5000/video_feed' }}  // URL del ESP32
         style={styles.webview}
         scalesPageToFit={true}  // Ajusta el contenido a la pantalla
+      />
+
+      {/* Botón que navega hacia upload.jsx */}
+      <Button
+        title="Ir a Upload"
+        onPress={() => navigation.navigate('UploadScreen')}
+        color="#4C51BF"
       />
     </View>
   );
