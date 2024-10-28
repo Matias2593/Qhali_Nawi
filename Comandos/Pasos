@@ -1,5 +1,8 @@
 Comandos en la terminal de la app:
 npm install firebase
 npx expo install expo-print
+npx install expo-document-picker
 npx expo install expo-document-picker
 npx expo install expo-sharing
+npx expo install 'expo-router'
+npx expo install 'react-native-webview';
