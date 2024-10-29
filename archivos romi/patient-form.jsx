@@ -61,6 +61,15 @@ const PatientForm = () => {
         gender: patientData.gender,
       });
 
+      await setDoc(doc(db, 'lastpatient', 'lastpatient'), {
+        id: patientData.id,
+        firstName: patientData.firstName,
+        lastName: patientData.lastName,
+        age: patientData.age,
+        dob: patientData.dob,
+        gender: patientData.gender,
+      });
+
       Alert.alert('Éxito', 'Datos guardados correctamente.');
       router.push(`/exam-config?id=${patientData.id}`);
       console.log("ID del paciente:", patientData.id);

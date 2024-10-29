@@ -34,6 +34,20 @@ const ExamConfig = () => {
         { merge: true } // Merge para no sobrescribir otros datos en el documento
       );
 
+      await setDoc(
+        doc(db, 'lastpatient', 'lastpatient'), // Referencia al documento del paciente usando el ID
+        {
+          examConfig: {
+            pattern,
+            stimulusSize,
+            stimulusColor: "Blanco",
+            backgroundColor: "Blanco 31.5 asb",
+            strategy: "SITA Estándar",
+          },
+        },
+        { merge: true } // Merge para no sobrescribir otros datos en el documento
+      );
+
       Alert.alert('Éxito', 'Configuración guardada correctamente en el perfil del paciente.');
       router.push('/tutorial');
     } catch (error) {
