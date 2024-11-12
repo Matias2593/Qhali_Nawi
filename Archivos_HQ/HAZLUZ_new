@@ -1,0 +1,309 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using UnityEngine;
+using TMPro;
+using UnityEngine.InputSystem;
+using Firebase.Firestore;
+using Firebase.Extensions;
+using System.Threading.Tasks;
+
+public class RandomMove : MonoBehaviour
+{
+    private Vector3[] positions = new Vector3[] {
+    new Vector3(-0.0000f, 4.0000f, 0.0000f),  
+    new Vector3(-0.1710f, 3.9397f, -0.2962f),
+    new Vector3(-0.1710f, 3.9397f, -0.1710f),
+    new Vector3(-0.2962f, 3.9397f, -0.1710f),
+    };
+
+    public float moveSpeed = 2f;
+    private Vector3 targetPosition;
+    private Material emissiveMaterial;
+
+    private float currentIntensity = 25.0f;
+    private float stepUp = 2.0f;
+    private float stepDown = -4.0f;
+    private bool thresholdReached = false;
+
+    private int positionIndex = 0;
+    private int totalPositions;
+    private bool stimulusObserved = false;
+    private bool decreasingIntensity = true;
+
+    private float[] intensityArray;
+    public TextMeshPro messageText;
+    public TextMeshPro stimulusText;
+    public TextMeshPro debugLogText;
+    public InputActionReference rightHandBButton;
+    private bool trialStarted = false;
+    private string logMessages = "";
+    private string nombreArchivo = "intensidades_observadas.txt";
+
+    private FirebaseFirestore firestore;
+    private bool isPaused = false; // Bandera global para la pausa
+
+    void Start()
+    {
+        emissiveMaterial = GetComponent<Renderer>().material;
+        totalPositions = positions.Length;
+        intensityArray = new float[totalPositions];
+
+        firestore = FirebaseFirestore.DefaultInstance;
+
+        if (rightHandBButton != null)
+        {
+            rightHandBButton.action.Enable();
+            rightHandBButton.action.performed += OnBButtonPressed;
+        }
+
+        Application.logMessageReceived += HandleLog;
+
+        // Inicia la verificación constante de Firestore
+        StartCoroutine(CheckFirestoreStateContinuously());
+        StartCoroutine(PauseInterruptHandler()); // Corutina global para manejar la pausa
+    }
+
+    void Update()
+    {
+        transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
+    }
+
+    private IEnumerator CheckFirestoreStateContinuously()
+    {
+        while (!trialStarted) // Solo sigue verificando si la prueba no ha comenzado
+        {
+            DocumentReference docRef = firestore.Collection("Estado_examen").Document("1");
+            Task<DocumentSnapshot> task = docRef.GetSnapshotAsync();
+
+            yield return new WaitUntil(() => task.IsCompleted);
+
+            if (task.Result.Exists)
+            {
+                string inicioState = task.Result.GetValue<string>("INICIO");
+                if (inicioState == "ON")
+                {
+                    StartCoroutine(StartWithDelay());
+                    yield break; // Detiene la verificación una vez que la prueba comienza
+                }
+            }
+
+            // Espera antes de volver a verificar
+            yield return new WaitForSeconds(1.0f);
+        }
+    }
+
+    private IEnumerator PauseInterruptHandler()
+    {
+        while (true)
+        {
+            DocumentReference docRef = firestore.Collection("Estado_examen").Document("1");
+            Task<DocumentSnapshot> task = docRef.GetSnapshotAsync();
+
+            yield return new WaitUntil(() => task.IsCompleted);
+
+            if (task.Result.Exists)
+            {
+                string pauseState = task.Result.GetValue<string>("PAUSA");
+                if (pauseState == "ON" && !isPaused)
+                {
+                    isPaused = true;
+                    StartCoroutine(HandlePause());
+                }
+            }
+
+            yield return new WaitForSeconds(1.0f); // Verifica el estado de pausa cada segundo
+        }
+    }
+
+    private IEnumerator HandlePause()
+    {
+        messageText.text = "Prueba en pausa...";
+        while (isPaused)
+        {
+            DocumentReference docRef = firestore.Collection("Estado_examen").Document("1");
+            Task<DocumentSnapshot> task = docRef.GetSnapshotAsync();
+
+            yield return new WaitUntil(() => task.IsCompleted);
+
+            if (task.Result.Exists)
+            {
+                string pauseState = task.Result.GetValue<string>("PAUSA");
+                if (pauseState == "OFF")
+                {
+                    isPaused = false; // Reanuda cuando PAUSA vuelve a OFF
+                }
+            }
+
+            yield return new WaitForSeconds(1.0f);
+        }
+
+        messageText.text = ""; // Limpia el mensaje al reanudar
+    }
+
+    IEnumerator StartWithDelay()
+    {
+        yield return new WaitForSeconds(5f);
+        StartCoroutine(PreTrialPeriod());
+    }
+
+    IEnumerator PreTrialPeriod()
+    {
+        messageText.text = "Periodo de prueba";
+        float elapsedTime = 0f;
+        float trialDuration = 15f;
+
+        while (elapsedTime < trialDuration)
+        {
+            yield return new WaitUntil(() => !isPaused); // Pausa global
+            targetPosition = GetRandomPosition();
+            UpdateEmissiveIntensity(25.0f);
+            GetComponent<Renderer>().enabled = true;
+            yield return new WaitForSeconds(0.2f);
+            GetComponent<Renderer>().enabled = false;
+            yield return new WaitForSeconds(2.0f);
+
+            elapsedTime += 2.2f;
+        }
+
+        messageText.text = "Se dará inicio a la prueba";
+        yield return new WaitForSeconds(2f);
+
+        trialStarted = true;
+        StartCoroutine(MoveRandomly());
+    }
+
+    IEnumerator MoveRandomly()
+    {
+        while (positionIndex < totalPositions)
+        {
+            yield return new WaitUntil(() => !isPaused); // Pausa global
+            currentIntensity = 25.0f;
+            thresholdReached = false;
+            decreasingIntensity = true;
+            targetPosition = positions[positionIndex];
+            messageText.text = "Evaluando posición " + (positionIndex + 1);
+
+            while (!thresholdReached)
+            {
+                yield return new WaitUntil(() => !isPaused); // Pausa global
+                stimulusObserved = false;
+
+                UpdateEmissiveIntensity(currentIntensity);
+                GetComponent<Renderer>().enabled = true;
+                yield return StartCoroutine(WaitForBPress());
+
+                if (decreasingIntensity)
+                {
+                    if (stimulusObserved)
+                    {
+                        currentIntensity += stepDown;
+                    }
+                    else
+                    {
+                        decreasingIntensity = false;
+                        currentIntensity += stepUp;
+                    }
+                }
+                else
+                {
+                    if (stimulusObserved)
+                    {
+                        thresholdReached = true;
+                        intensityArray[positionIndex] = currentIntensity;
+                    }
+                    else
+                    {
+                        currentIntensity += stepUp;
+                    }
+                }
+
+                GetComponent<Renderer>().enabled = false;
+                yield return new WaitForSeconds(1.5f);
+            }
+
+            positionIndex++;
+        }
+
+        Debug.Log("Prueba completada.");
+        GuardarArchivoTXT();
+        SetFirestoreStateOff();
+    }
+
+    IEnumerator WaitForBPress()
+    {
+        float timer = 1.5f;
+        while (timer > 0)
+        {
+            if (stimulusObserved) break;
+            timer -= Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    Vector3 GetRandomPosition()
+    {
+        return positions[Random.Range(0, positions.Length)];
+    }
+
+    void UpdateEmissiveIntensity(float intensity)
+    {
+        currentIntensity = Mathf.Clamp(intensity, 0, 1000);
+        emissiveMaterial.SetColor("_EmissionColor", Color.white * currentIntensity);
+    }
+
+    private void SetFirestoreStateOff()
+    {
+        DocumentReference docRef = firestore.Collection("Estado_examen").Document("1");
+        Dictionary<string, object> updates = new Dictionary<string, object>
+        {
+            { "INICIO", "OFF" }
+        };
+        docRef.UpdateAsync(updates).ContinueWithOnMainThread(task =>
+        {
+            if (task.IsCompleted)
+            {
+                Debug.Log("Estado cambiado a OFF en Firestore.");
+            }
+        });
+    }
+
+    private void OnBButtonPressed(InputAction.CallbackContext context)
+    {
+        if (trialStarted)
+        {
+            stimulusObserved = true;
+            Debug.Log("Botón B presionado.");
+        }
+    }
+
+    private void HandleLog(string logString, string stackTrace, LogType type)
+    {
+        logMessages += logString + "\n";
+        if (debugLogText != null)
+        {
+            debugLogText.text = logMessages;
+        }
+    }
+
+    void GuardarArchivoTXT()
+    {
+        string rutaCompleta = Path.Combine(Application.persistentDataPath, nombreArchivo);
+
+        try
+        {
+            string contenidoArchivo = "Intensidades Observadas:\n";
+            for (int i = 0; i < intensityArray.Length; i++)
+            {
+                contenidoArchivo += "Posición " + (i + 1) + ": " + intensityArray[i].ToString() + "\n";
+            }
+
+            File.WriteAllText(rutaCompleta, contenidoArchivo);
+            Debug.Log("Archivo guardado en: " + rutaCompleta);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("Error al guardar el archivo: " + e.Message);
+        }
+    }
+}
