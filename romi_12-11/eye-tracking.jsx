@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Button, Alert, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import { db } from '../firebaseConfig'; // Importa solo Firestore
 import { doc, updateDoc } from 'firebase/firestore'; // Importa funciones para Firestore
 
 const EyeTracking = () => {
+  const { id } = useLocalSearchParams(); // Recupera el id del paciente
+
   const router = useRouter();
   const [fixationLossCounter, setFixationLossCounter] = useState(0);
   const [alertShown, setAlertShown] = useState(false);
@@ -90,7 +92,7 @@ const EyeTracking = () => {
 
   const handleFinishExam = async () => {
     try {
-      router.push('/exam-complete');
+      router.push(`/exam-complete?id=${id}`);
 
       // Cambiar INICIO a "OFF" en Firestore
       const docRef = doc(db, 'Estado_examen', '1');
@@ -196,7 +198,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   button: {
-    backgroundColor: '#4C51BF', // Azul
+    backgroundColor: '#6B46C1', // Azul
     borderRadius: 20, // Bordes redondeados
     marginVertical: 10, // Separación entre los botones
     paddingVertical: 12, // Ajuste del padding vertical

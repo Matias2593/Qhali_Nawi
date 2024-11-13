@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Button, Text, View, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Button, Text, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
 const ExamenCompletado = ({ navigation }) => {
+  
   const router = useRouter();
+  const { id } = useLocalSearchParams(); // Recupera el id del paciente
 
   const handleGoBack = () => {
-    router.push('/'); // Redirige a la pantalla principal o a cualquier otra pantalla inicial.
+    router.push(`/eye-selection?id=${id}`);
   };
 
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -53,7 +55,9 @@ const ExamenCompletado = ({ navigation }) => {
       </Text>
       
       {/* Botón para generar el PDF */}
-      <Button title="Listo" onPress={generarPdf} />
+      <TouchableOpacity style={styles.button} onPress={generarPdf}>
+        <Text style={styles.buttonText}>Listo</Text>
+      </TouchableOpacity>
 
       {/* Mostrar URL del PDF si está disponible */}
       {pdfUrl && (
@@ -66,7 +70,9 @@ const ExamenCompletado = ({ navigation }) => {
       )}
 
       {/* Botón para volver a la pantalla principal */}
-      <Button title="Volver a la pantalla principal" onPress={handleGoBack} />
+      <TouchableOpacity style={styles.button} onPress={handleGoBack}>
+        <Text style={styles.buttonText}>Volver a la pantalla principal</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -101,6 +107,19 @@ const styles = StyleSheet.create({
     color: 'red',
     marginVertical: 10,
     textAlign: 'center',
+  },
+  button: {
+    backgroundColor: '#6B46C1', // Color morado
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 25, // Bordes redondeados
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 
