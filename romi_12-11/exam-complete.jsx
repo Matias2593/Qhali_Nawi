@@ -5,7 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 const ExamenCompletado = ({ navigation }) => {
   
   const router = useRouter();
-  const { id } = useLocalSearchParams(); // Recupera el id del paciente
+  const { id } = useLocalSearchParams(); 
 
   const handleGoBack = () => {
     router.push(`/eye-selection?id=${id}`);
@@ -42,7 +42,7 @@ const ExamenCompletado = ({ navigation }) => {
       const data = await response.json();
       setPdfUrl(data.pdf_url);
     } catch (err) {
-      setError(`Error al generar PDF: ${err.message}`);
+      setError(`Error al generar el reporte: ${err.message}`);
     }
   };
 
@@ -56,7 +56,7 @@ const ExamenCompletado = ({ navigation }) => {
       
       {/* Botón para generar el PDF */}
       <TouchableOpacity style={styles.button} onPress={generarPdf}>
-        <Text style={styles.buttonText}>Listo</Text>
+        <Text style={styles.buttonText}>Enviar resultados</Text>
       </TouchableOpacity>
 
       {/* Mostrar URL del PDF si está disponible */}
@@ -71,7 +71,13 @@ const ExamenCompletado = ({ navigation }) => {
 
       {/* Botón para volver a la pantalla principal */}
       <TouchableOpacity style={styles.button} onPress={handleGoBack}>
-        <Text style={styles.buttonText}>Volver a la pantalla principal</Text>
+        <Text style={styles.buttonText}>Continuar con el siguiente ojo</Text>
+      </TouchableOpacity>
+
+      {/* Botón para volver al inicio */}
+      <Text style={styles.explanation}>Si ya completó el examen con ambos ojos:</Text>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/')}>
+        <Text style={styles.buttonText}>Volver al inicio</Text>
       </TouchableOpacity>
     </View>
   );
@@ -95,6 +101,13 @@ const styles = StyleSheet.create({
     color: '#555',
     textAlign: 'center',
     marginBottom: 20,
+  },
+
+  explanation: {
+    fontSize: 16,
+    color: '#555',
+    textAlign: 'center',
+    marginBottom: 5,
   },
   pdfText: {
     fontSize: 14,
